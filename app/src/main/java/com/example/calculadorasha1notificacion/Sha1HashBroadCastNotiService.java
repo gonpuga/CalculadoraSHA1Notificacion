@@ -1,16 +1,19 @@
 package com.example.calculadorasha1notificacion;
 
+import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Binder;
+import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
-import android.support.v4.app.NotificationCompat;
-import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
+
+import androidx.core.app.NotificationCompat;
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import java.security.MessageDigest;
 import java.util.concurrent.BlockingQueue;
@@ -34,6 +37,10 @@ public class Sha1HashBroadCastNotiService extends Service {
 
     private static final BlockingQueue<Runnable> sPoolWorkQueue =
             new LinkedBlockingQueue<Runnable>(MAX_QUEUE_SIZE);
+
+    //notifications
+    private NotificationManager nm;
+    private static final String CHANNEL_ID="myChannel";
 
     private static final ThreadFactory sThreadFactory = new ThreadFactory() {
         private final AtomicInteger mCount = new AtomicInteger(1);
@@ -81,13 +88,24 @@ public class Sha1HashBroadCastNotiService extends Service {
     private void notifyUser(final String text,final String digest) {
         String msg = String.format(
                 "The Hash for %s is %s", text,digest);
-        NotificationCompat.Builder builder = new NotificationCompat.Builder(this)
+        // Gets an instance of the NotificationManager service
+        nm = (NotificationManager)
+                getSystemService(Context.NOTIFICATION_SERVICE);
+
+        //create channel if needed
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            String name="Sha1 Channel";
+            String description="Channel to share Sha1 Hash";
+            int importance = NotificationManager.IMPORTANCE_DEFAULT;
+            NotificationChannel channel = new NotificationChannel(CHANNEL_ID, name, importance);
+            channel.setDescription(description);
+            nm.createNotificationChannel(channel);
+        }
+
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
                 .setSmallIcon(android.R.drawable.ic_dialog_alert)
                 .setContentTitle("Hashing Result")
                 .setContentText(msg);
-        // Gets an instance of the NotificationManager service
-        NotificationManager nm = (NotificationManager)
-                getSystemService(Context.NOTIFICATION_SERVICE);
         // Sets an unique ID for this notification
         nm.notify(text.hashCode(), builder.build());
     }
